@@ -37,7 +37,6 @@ RATE_CONFIG = {
     "default_rate": 150,
     "emotion_multipliers": {
         "dramatic": 1.2,
-        "cheerful": 1.13, 
         "playful": 1.07,
         "professional": 1.0,
         "calm": 0.87,
@@ -52,29 +51,25 @@ def get_voice_emotions_for_platform():
     
     if system == "darwin":  # macOS
         return {
-            "cheerful": {
-                "description": "Upbeat, positive, and energetic voices",
-                "voices": ["Good News", "Bubbles", "Bells"]
-            },
             "dramatic": {
                 "description": "Theatrical, expressive, and attention-grabbing voices", 
-                "voices": ["Bad News", "Bahh", "Cellos", "Wobble", "Deranged"]
+                "voices": ["Fred"]
             },
             "friendly": {
                 "description": "Warm, approachable, and conversational voices",
-                "voices": ["Fred", "Albert", "Flo", "Grandma"]
+                "voices": ["Samantha", "Alex"]
             },
             "professional": {
                 "description": "Clear, authoritative, and business-appropriate voices",
-                "voices": ["Eddy", "Daniel", "Anna", "Alex"]
+                "voices": ["Alex"]
             },
             "playful": {
                 "description": "Fun, quirky, and entertaining voices",
-                "voices": ["Boing", "Bubbles", "Bahh"]
+                "voices": ["Fred"]
             },
             "calm": {
                 "description": "Soothing, gentle, and relaxed voices", 
-                "voices": ["Alice", "Ellen", "Amelie", "Samantha"]
+                "voices": ["Alex", "Samantha"]
             }
         }
     elif system == "windows":
@@ -284,13 +279,15 @@ def speak(text: str, voice: str = None, emotion: str = None, rate: int = 150) ->
     """Speak text aloud with optional voice and emotion control
     
     Args:
-        text: The text to speak
-        voice: Specific voice name to use (e.g. "Fred", "Good News", "Bad News")
-        emotion: Emotion/vibe - "cheerful", "dramatic", "friendly", "professional", "playful", "calm"
+        text: The text to speak (RECOMMENDED: Use short, punchy sentences for better speech flow)
+        voice: Specific voice name to use (e.g. "Fred", "Alex", "Samantha")
+        emotion: Emotion/vibe - "dramatic", "friendly", "professional", "playful", "calm"
         rate: Speaking rate in words per minute (default: 150, range: 50-400)
     
     Returns:
         Confirmation message about what was spoken
+    
+    Note: For optimal speech quality, use concise sentences under 20 words when possible.
     """
     # Validate inputs
     is_valid, error_msg = validate_speak_input(text, rate)
@@ -452,13 +449,6 @@ def voice_guide() -> str:
         "",
         "📋 EMOTION CATEGORIES & WHEN TO USE:",
         "",
-        "🎉 CHEERFUL - Use when:",
-        "   • Celebrating success or achievements",
-        "   • Sharing good news or positive updates", 
-        "   • Expressing excitement or enthusiasm",
-        "   • Encouraging or motivating users",
-        "   Example: speak('Congratulations! Task completed successfully!', emotion='cheerful')",
-        "",
         "🎭 DRAMATIC - Use when:",
         "   • Making important announcements",
         "   • Highlighting critical information or warnings",
@@ -502,24 +492,29 @@ def voice_guide() -> str:
         "",
         "💡 BEST PRACTICES FOR AI AGENTS:",
         "",
-        "1. MATCH EMOTION TO CONTENT:",
-        "   - Good news → cheerful",
+        "1. USE SHORT SENTENCES:",
+        "   - Keep sentences under 20 words for optimal speech flow",
+        "   - Break long thoughts into multiple short speaks",
+        "   - Avoid complex clauses and run-on sentences",
+        "",
+        "2. MATCH EMOTION TO CONTENT:",
+        "   - Good news → friendly",
         "   - Warnings → dramatic", 
         "   - Instructions → professional",
         "   - Comfort → calm",
         "",
-        "2. VARY YOUR VOICE:",
+        "3. VARY YOUR VOICE:",
         "   - Don't use the same emotion for everything",
         "   - Switch between voices to keep interactions dynamic",
         "   - Use dramatic sparingly for maximum impact",
         "",
-        "3. CONSIDER CONTEXT:",
+        "4. CONSIDER CONTEXT:",
         "   - Professional settings → professional/friendly",
         "   - Casual chat → friendly/playful",
         "   - Emergency alerts → dramatic",
         "   - Relaxation → calm",
         "",
-        "4. EMOTIONAL PROGRESSION:",
+        "5. EMOTIONAL PROGRESSION:",
         "   - Start conversations friendly",
         "   - Escalate to dramatic for important points",
         "   - Return to calm for conclusions",
@@ -531,7 +526,7 @@ def voice_guide() -> str:
         "",
         "🎯 QUICK REFERENCE:",
         "speak('text')                          # Basic speech",
-        "speak('text', emotion='cheerful')      # Emotion-based",
+        "speak('text', emotion='friendly')      # Emotion-based",
         "speak('text', voice='Fred')            # Specific voice", 
         "speak('text', emotion='calm', rate=120) # Full control",
         "",
