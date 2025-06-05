@@ -55,8 +55,9 @@ ELEVENLABS_API_KEY=your_api_key_here TTS_ENGINE=elevenlabs uv run python main.py
 ```
 
 **Engine Features:**
+
 - **pyttsx3**: Offline engine with system voices and rate control
-- **gTTS**: Online Google TTS with accent variations for emotions  
+- **gTTS**: Online Google TTS with accent variations for emotions
 - **ElevenLabs**: AI-powered voices with advanced emotional control
 
 ### ElevenLabs Configuration
@@ -69,6 +70,7 @@ export ELEVENLABS_VOICE_ID="JBFqnCBsd6RMkjVDRZzb"  # Optional, defaults to Georg
 ```
 
 **Or create a `.env` file** (automatically loaded):
+
 ```bash
 ELEVENLABS_API_KEY=your_api_key_here
 ELEVENLABS_VOICE_ID=JBFqnCBsd6RMkjVDRZzb
@@ -94,62 +96,102 @@ uv sync  # Full installation with all engines by default
 
 ### 2. Configure MCP Client
 
+#### Claude Desktop
+
 Add to your MCP client configuration (e.g., Claude Desktop's config):
 
 ```json
 {
-  "mcpServers": {
-    "vocalize": {
-      "command": "uv",
-      "args": ["run", "python", "/path/to/vocalize-mcp/main.py"],
-      "cwd": "/path/to/vocalize-mcp",
-      "env": {
-        "TTS_ENGINE": "pyttsx3",
-        "ELEVENLABS_API_KEY": "your_api_key_here",
-        "ELEVENLABS_VOICE_ID": "JBFqnCBsd6RMkjVDRZzb"
-      }
+    "mcpServers": {
+        "vocalize": {
+            "command": "uvx",
+            "args": [
+                "--from",
+                "git+https://github.com/2389-research/vocalize-mcp",
+                "vocalize-mcp"
+            ],
+            "env": {
+                "TTS_ENGINE": "gtts"
+            }
+        }
     }
-  }
 }
+```
+
+or
+
+```json
+{
+    "mcpServers": {
+        "vocalize": {
+            "command": "uvx",
+            "args": [
+                "--from",
+                "git+https://github.com/2389-research/vocalize-mcp",
+                "vocalize-mcp"
+            ],
+            "env": {
+                "TTS_ENGINE": "gtts",
+                "ELEVENLABS_API_KEY": "sk_xxx",
+                "ELEVENLABS_VOICE_ID": "JBFqnCBsd6RMkjVDRZzb"
+            }
+        }
+    }
+}
+```
+
+#### Claude Code
+
+```shell
+claude mcp add-json vocalize '{"type":"stdio","command":"uvx","args":["--from","git+https://github.com/2389-research/vocalize-mcp","vocalize-mcp"],"ENV":{"TTS_ENGINE":"gtts"}}'
+```
+
+Eleven Labs
+
+```shell
+claude mcp add-json vocalize '{"type":"stdio","command":"uvx","args":["--from","git+https://github.com/2389-research/vocalize-mcp","vocalize-mcp"],"ENV":{"ELEVENLABS_API_KEY:","sk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", "ELEVENLABS_VOICE_ID":"JBFqnCBsd6RMkjVDRZzb","TTS_ENGINE":"elevenlabs"}}'
 ```
 
 ### 3. Alternative Installation Methods
 
 **Using Python directly:**
+
 ```json
 {
-  "mcpServers": {
-    "vocalize": {
-      "command": "python",
-      "args": ["/path/to/vocalize-mcp/main.py"],
-      "env": {
-        "TTS_ENGINE": "elevenlabs",
-        "ELEVENLABS_API_KEY": "your_api_key"
-      }
+    "mcpServers": {
+        "vocalize": {
+            "command": "python",
+            "args": ["/path/to/vocalize-mcp/main.py"],
+            "env": {
+                "TTS_ENGINE": "elevenlabs",
+                "ELEVENLABS_API_KEY": "your_api_key"
+            }
+        }
     }
-  }
 }
 ```
 
 **Using executable script:**
+
 ```json
 {
-  "mcpServers": {
-    "vocalize": {
-      "command": "/path/to/vocalize-mcp/.venv/bin/vocalize-mcp",
-      "env": {
-        "TTS_ENGINE": "gtts"
-      }
+    "mcpServers": {
+        "vocalize": {
+            "command": "/path/to/vocalize-mcp/.venv/bin/vocalize-mcp",
+            "env": {
+                "TTS_ENGINE": "gtts"
+            }
+        }
     }
-  }
 }
 ```
 
 ### 4. Available Tools
 
 Once connected, you'll have access to these MCP tools:
+
 - `speak()` - Generate speech with emotional control
-- `list_voices()` - Browse available voices for current engine  
+- `list_voices()` - Browse available voices for current engine
 - `list_emotions()` - See emotion categories and descriptions
 - `voice_guide()` - Complete usage documentation
 
@@ -171,7 +213,7 @@ uv run pytest
 
 # Run specific test suites
 uv run pytest test_voice.py          # Unit tests
-uv run pytest test_integration.py    # Integration tests  
+uv run pytest test_integration.py    # Integration tests
 uv run pytest test_improvements.py   # Improvement validation
 
 # Run tests excluding slow audio tests
@@ -235,6 +277,7 @@ voice_guide()
 ### Why uv?
 
 This project uses [uv](https://github.com/astral-sh/uv) for dependency management because it's:
+
 - ⚡ **10-100x faster** than pip for installing packages
 - 🔒 **Reliable** with deterministic dependency resolution
 - 🛠️ **Simple** with built-in virtual environment management
@@ -254,33 +297,34 @@ VocalizeAgent is built on a FastMCP server that exposes TTS functionality throug
 
 #### TTS Engine Comparison
 
-| Feature | pyttsx3 | gTTS | ElevenLabs |
-|---------|---------|------|------------|
-| **Connection** | Offline | Online (requires internet) | Online (requires internet + API key) |
-| **Voices** | System voices | Google voices with accents | AI-generated voices |
-| **Emotion mapping** | Voice selection | Accent variation (UK, AU, CA, US) | Voice settings (stability, style, similarity) |
-| **Rate control** | Full rate control | Fixed rate | Fixed rate |
-| **Latency** | Instant | Network dependent | Network dependent |
-| **Quality** | System dependent | Consistent high quality | Premium AI quality |
-| **Cost** | Free | Free | Paid (API credits) |
-| **Voice variety** | Limited to system | Accent variations | Unlimited AI voices |
+| Feature             | pyttsx3           | gTTS                              | ElevenLabs                                    |
+| ------------------- | ----------------- | --------------------------------- | --------------------------------------------- |
+| **Connection**      | Offline           | Online (requires internet)        | Online (requires internet + API key)          |
+| **Voices**          | System voices     | Google voices with accents        | AI-generated voices                           |
+| **Emotion mapping** | Voice selection   | Accent variation (UK, AU, CA, US) | Voice settings (stability, style, similarity) |
+| **Rate control**    | Full rate control | Fixed rate                        | Fixed rate                                    |
+| **Latency**         | Instant           | Network dependent                 | Network dependent                             |
+| **Quality**         | System dependent  | Consistent high quality           | Premium AI quality                            |
+| **Cost**            | Free              | Free                              | Paid (API credits)                            |
+| **Voice variety**   | Limited to system | Accent variations                 | Unlimited AI voices                           |
 
 ### Voice Emotion Categories
 
-| Emotion | Description | Sample Voices |
-|---------|-------------|---------------|
-| 🎉 Cheerful | Upbeat, positive, energetic | Good News, Bubbles, Bells |
-| 🎭 Dramatic | Theatrical, expressive | Bad News, Bahh, Cellos, Wobble |
-| 🤝 Friendly | Warm, approachable | Fred, Albert, Flo, Grandma |
-| 💼 Professional | Clear, authoritative | Eddy, Daniel, Anna |
-| 🎪 Playful | Fun, quirky, entertaining | Boing, Bubbles, Bahh |
-| 😌 Calm | Soothing, gentle, relaxed | Alice, Ellen, Amelie |
+| Emotion         | Description                 | Sample Voices                  |
+| --------------- | --------------------------- | ------------------------------ |
+| 🎉 Cheerful     | Upbeat, positive, energetic | Good News, Bubbles, Bells      |
+| 🎭 Dramatic     | Theatrical, expressive      | Bad News, Bahh, Cellos, Wobble |
+| 🤝 Friendly     | Warm, approachable          | Fred, Albert, Flo, Grandma     |
+| 💼 Professional | Clear, authoritative        | Eddy, Daniel, Anna             |
+| 🎪 Playful      | Fun, quirky, entertaining   | Boing, Bubbles, Bahh           |
+| 😌 Calm         | Soothing, gentle, relaxed   | Alice, Ellen, Amelie           |
 
 ### API Reference
 
 ```python
 speak(text: str, voice: str = None, emotion: str = None, rate: int = 150) -> str
 ```
+
 - **text**: The text to speak
 - **voice**: Specific voice name (e.g., "Fred", "Good News")
 - **emotion**: Emotion category (cheerful, dramatic, friendly, professional, playful, calm)
@@ -289,21 +333,25 @@ speak(text: str, voice: str = None, emotion: str = None, rate: int = 150) -> str
 ```python
 list_emotions() -> str
 ```
+
 Lists all available emotion categories with descriptions
 
 ```python
 list_voices() -> str
 ```
+
 Lists all available TTS voices organized by emotion category
 
 ```python
 voice_guide() -> str
 ```
+
 Comprehensive documentation for effective voice usage
 
 ### Customization
 
 VocalizeAgent can be extended by:
+
 - Adding new emotion categories to the `VOICE_EMOTIONS` dictionary
 - Adjusting rate modifiers for different emotional tones
 - Implementing voice transformations for more expressive delivery

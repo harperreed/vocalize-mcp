@@ -7,7 +7,10 @@
                 "--from",
                 "git+https://github.com/2389-research/vocalize-mcp",
                 "vocalize-mcp"
-            ]
+            ],
+            "ENV": {
+                "TTS_ENGINE": "gtts"
+            }
         }
     }
 }

@@ -359,15 +359,15 @@ def speak(text: str, voice: str = None, emotion: str = None, rate: int = 150) ->
     """Speak text aloud with optional voice and emotion control
     
     Args:
-        text: The text to speak (RECOMMENDED: Use short, punchy sentences for better speech flow)
+        text: The text to speak (KEEP IT SHORT! Aim for under 10 words for best results)
         voice: Specific voice name to use (e.g. "Fred", "Alex", "Samantha")
         emotion: Emotion/vibe - "dramatic", "friendly", "professional", "playful", "calm"
         rate: Speaking rate in words per minute (default: 150, range: 50-400)
     
     Returns:
-        Confirmation message about what was spoken
+        Confirmation message about what was spoken, including engine used
     
-    Note: For optimal speech quality, use concise sentences under 20 words when possible.
+    Note: Shorter is better! Use brief phrases (under 10 words) for optimal speech flow.
     """
     # Validate inputs
     is_valid, error_msg = validate_speak_input(text, rate)
@@ -421,13 +421,12 @@ def _speak_with_pyttsx3(text: str, voice: str, emotion: str, rate: int) -> str:
     tts_engine.runAndWait()
     
     # Build response message
-    details = []
+    details = ["engine: pyttsx3"]  # Engine first for visibility
     if emotion:
         details.append(f"emotion: {emotion}")
     if voice:
         details.append(f"voice: {voice_used}")
     details.append(f"rate: {final_rate} wpm")
-    details.append("engine: pyttsx3")
     
     detail_str = f" ({', '.join(details)})" if details else ""
     success_msg = f"🗣️ Spoke: '{text}'{detail_str}"
@@ -474,13 +473,12 @@ def _speak_with_gtts(text: str, voice: str, emotion: str, rate: int) -> str:
         os.unlink(tmp_file_path)
         
         # Build response message
-        details = []
+        details = ["engine: gTTS"]  # Engine first for visibility
         if emotion:
             details.append(f"emotion: {emotion}")
         if voice:
             details.append(f"voice: {voice}")
         details.append(f"accent: {tld}")
-        details.append("engine: gTTS")
         
         detail_str = f" ({', '.join(details)})" if details else ""
         success_msg = f"🗣️ Spoke: '{text}'{detail_str}"
@@ -547,7 +545,7 @@ def _speak_with_elevenlabs(text: str, voice: str, emotion: str, rate: int) -> st
         os.unlink(tmp_file_path)
         
         # Build response message
-        details = []
+        details = ["engine: ElevenLabs"]  # Engine first for visibility
         if emotion:
             details.append(f"emotion: {emotion}")
         if voice:
@@ -555,7 +553,6 @@ def _speak_with_elevenlabs(text: str, voice: str, emotion: str, rate: int) -> st
         else:
             details.append(f"voice: {voice_id}")
         details.append("model: eleven_flash_v2_5")
-        details.append("engine: ElevenLabs")
         
         detail_str = f" ({', '.join(details)})" if details else ""
         success_msg = f"🗣️ Spoke: '{text}'{detail_str}"

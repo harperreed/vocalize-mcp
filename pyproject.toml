@@ -1,6 +1,6 @@
 [project]
 name = "vocalize-mcp"
-version = "0.2.0"
+version = "0.3.0"
 description = "Production-ready MCP server providing emotion-based text-to-speech capabilities for AI agents"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -18,25 +18,12 @@ vocalize-mcp = "main:main"
 vocalize-server = "main:main"
 
 [project.optional-dependencies]
-test = [
-    "pytest>=8.0.0",
-    "pytest-mock>=3.12.0",
-]
-dev = [
-    "vulture>=2.7",
-    "ruff>=0.11.8",
-    "pre-commit>=3.0.0",
-]
-simple = [
-    "mcp[cli]>=1.9.2",
-    "pyttsx3>=2.98",
-    "python-dotenv>=1.0.0",
-]
+test = ["pytest>=8.0.0", "pytest-mock>=3.12.0"]
+dev = ["vulture>=2.7", "ruff>=0.11.8", "pre-commit>=3.0.0"]
+simple = ["mcp[cli]>=1.9.2", "pyttsx3>=2.98", "python-dotenv>=1.0.0"]
 
 [tool.pytest.ini_options]
-markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-]
+markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
 
 [tool.uv]
 package = true
