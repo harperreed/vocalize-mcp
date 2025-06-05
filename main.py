@@ -101,6 +101,7 @@ RATE_CONFIG = {
     "default_rate": 150,
     "emotion_multipliers": {
         "dramatic": 1.2,
+        "cheerful": 1.13,
         "playful": 1.07,
         "professional": 1.0,
         "calm": 0.87,
@@ -115,6 +116,10 @@ def get_voice_emotions_for_platform():
     
     if system == "darwin":  # macOS
         return {
+            "cheerful": {
+                "description": "Upbeat, positive, and energetic voices",
+                "voices": ["Samantha", "Alex"]
+            },
             "dramatic": {
                 "description": "Theatrical, expressive, and attention-grabbing voices", 
                 "voices": ["Fred"]
@@ -727,6 +732,13 @@ def voice_guide() -> str:
         "",
         "📋 EMOTION CATEGORIES & WHEN TO USE:",
         "",
+        "😊 CHEERFUL - Use when:",
+        "   • Celebrating successes and achievements",
+        "   • Sharing good news or positive updates",
+        "   • Expressing enthusiasm and excitement",
+        "   • Creating an upbeat, energetic atmosphere",
+        "   Example: speak('Great job! Your task completed successfully!', emotion='cheerful')",
+        "",
         "🎭 DRAMATIC - Use when:",
         "   • Making important announcements",
         "   • Highlighting critical information or warnings",
@@ -776,6 +788,7 @@ def voice_guide() -> str:
         "   - Avoid complex clauses and run-on sentences",
         "",
         "2. MATCH EMOTION TO CONTENT:",
+        "   - Celebrations → cheerful",
         "   - Good news → friendly",
         "   - Warnings → dramatic", 
         "   - Instructions → professional",
