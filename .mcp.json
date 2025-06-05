@@ -1,16 +1,16 @@
 {
-    "mcpServers": {
-        "vocalize": {
-            "type": "stdio",
-            "command": "uvx",
-            "args": [
-                "--from",
-                "git+https://github.com/2389-research/vocalize-mcp",
-                "vocalize-mcp"
-            ],
-            "ENV": {
-                "TTS_ENGINE": "gtts"
-            }
-        }
+  "mcpServers": {
+    "vocalize": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/2389-research/vocalize-mcp",
+        "vocalize-mcp"
+      ],
+      "env": {
+        "TTS_ENGINE": "gtts"
+      }
     }
+  }
 }

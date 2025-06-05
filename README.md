@@ -143,13 +143,21 @@ or
 #### Claude Code
 
 ```shell
-claude mcp add-json vocalize '{"type":"stdio","command":"uvx","args":["--from","git+https://github.com/2389-research/vocalize-mcp","vocalize-mcp"],"ENV":{"TTS_ENGINE":"gtts"}}'
+claude mcp add-json vocalize '{"type":"stdio","command":"uvx","args":["--from","git+https://github.com/2389-research/vocalize-mcp","vocalize-mcp"],"env":{"TTS_ENGINE":"gtts"}}'
 ```
 
 Eleven Labs
 
 ```shell
-claude mcp add-json vocalize '{"type":"stdio","command":"uvx","args":["--from","git+https://github.com/2389-research/vocalize-mcp","vocalize-mcp"],"ENV":{"ELEVENLABS_API_KEY:","sk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", "ELEVENLABS_VOICE_ID":"JBFqnCBsd6RMkjVDRZzb","TTS_ENGINE":"elevenlabs"}}'
+claude mcp add-json vocalize '{"type":"stdio","command":"uvx","args":["--from","git+https://github.com/harperreed/vocalize-mcp","vocalize-mcp"],"env":{"ELEVENLABS_API_KEY":"sk_example_key", "ELEVENLABS_VOICE_ID":"goT3UYdM9bhm0n2lmKQx","TTS_ENGINE":"elevenlabs"}}' 
+```
+
+(you can pass `-s user` or `-s project` if you want it to persist)
+
+then verify:
+
+```
+claude mcp get vocalize
 ```
 
 ### 3. Alternative Installation Methods
