@@ -39,8 +39,7 @@ repos:
           - id: python-test
             name: "python: tests"
             description: "Run python tests (excluding slow tests)"
-            entry: uv run pytest -m "not slow" --tb=short
+            entry: bash -c 'uv sync --extra test && uv run pytest test_integration.py -m "not slow" --tb=short'
             language: system
             types: [python]
             pass_filenames: false
-            stages: [manual]

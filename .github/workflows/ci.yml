@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.13"]
+        
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+        
+    - name: Set up Python ${{ matrix.python-version }}
+      run: uv python install ${{ matrix.python-version }}
+      
+    - name: Install dependencies
+      run: |
+        uv sync --extra test --extra dev
+        
+    - name: Lint with ruff
+      run: |
+        uv run ruff check main.py test_*.py
+        uv run ruff format --check main.py test_*.py
+        
+    - name: Check for dead code with vulture
+      run: |
+        uv run vulture main.py --min-confidence 80
+        
+    - name: Run tests
+      run: |
+        uv run pytest test_integration.py -m "not slow" -v
+        
+    - name: Test engine functionality (without API keys)
+      run: |
+        # Test pyttsx3 (should always work)
+        TTS_ENGINE=pyttsx3 uv run python test_engines.py
+        
+        # Test fallback behavior for gTTS and ElevenLabs
+        echo "Testing gTTS fallback (no dependencies in CI)"
+        TTS_ENGINE=gtts uv run python -c "import main; print(f'Engine: {main.TTS_ENGINE}')"
+        
+        echo "Testing ElevenLabs fallback (no API key)"
+        TTS_ENGINE=elevenlabs uv run python -c "import main; print(f'Engine: {main.TTS_ENGINE}')"
+
+  test-engines:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.13"]
+        
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+        
+    - name: Set up Python ${{ matrix.python-version }}
+      run: uv python install ${{ matrix.python-version }}
+      
+    - name: Install dependencies
+      run: uv sync
+        
+    - name: Test basic functionality
+      run: |
+        # Test that the server can initialize
+        timeout 10s uv run python main.py &
+        sleep 5
+        # Kill the background process
+        pkill -f "python main.py" || true
+      shell: bash
+      
+    - name: Test voice listing (no audio)
+      run: |
+        uv run python -c "
+        import main
+        result = main.list_voices()
+        print('Voice listing works:', len(result) > 0)
+        
+        result = main.list_emotions()
+        print('Emotion listing works:', len(result) > 0)
+        
+        result = main.voice_guide()
+        print('Voice guide works:', len(result) > 0)
+        "
+
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+        
+    - name: Set up Python
+      run: uv python install 3.13
+      
+    - name: Install dev dependencies
+      run: uv sync --extra dev
+      
+    - name: Run pre-commit hooks
+      run: |
+        uv run pre-commit run --all-files
