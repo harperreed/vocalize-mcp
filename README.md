@@ -21,21 +21,41 @@ This tool enhances AI interactions by adding an audio dimension to text-based co
 
 ```bash
 # Clone the repository
-git clone https://github.com/harperreed/vocalize-agent.git
-cd vocalize-agent
+git clone https://github.com/harperreed/vocalize-mcp.git
+cd vocalize-mcp
 
-# Set up Python environment
+# Install with uv (recommended)
+uv sync
+
+# OR install with pip
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install dependencies
 pip install -e .
 ```
 
 ### Running the Server
 
 ```bash
+# With uv (recommended)
+uv run python main.py
+
+# OR with activated virtual environment
 python main.py
+```
+
+### Testing
+
+```bash
+# Run all tests
+uv run pytest
+
+# Run specific test suites
+uv run pytest test_voice.py          # Unit tests
+uv run pytest test_integration.py    # Integration tests  
+uv run pytest test_improvements.py   # Improvement validation
+
+# Run tests excluding slow audio tests
+uv run pytest -m "not slow"
 ```
 
 ### Using with AI Agents
@@ -84,8 +104,17 @@ voice_guide()
 ### Dependencies
 
 - **Python**: 3.13+
+- **uv**: Fast Python package manager (recommended) - [Install uv](https://github.com/astral-sh/uv)
 - **MCP**: Machine Conversation Protocol for AI agent integration
 - **pyttsx3**: Cross-platform text-to-speech library
+
+### Why uv?
+
+This project uses [uv](https://github.com/astral-sh/uv) for dependency management because it's:
+- ⚡ **10-100x faster** than pip for installing packages
+- 🔒 **Reliable** with deterministic dependency resolution
+- 🛠️ **Simple** with built-in virtual environment management
+- 📦 **Compatible** with standard Python packaging
 
 ### Architecture
 
