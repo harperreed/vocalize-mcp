@@ -1,7 +1,7 @@
 # ABOUTME: Comprehensive tests for voice functionality in the vocalize MCP server
 # ABOUTME: Tests emotion-based voice selection, error handling, and all voice tools
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 import main
 
 

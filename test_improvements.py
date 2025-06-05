@@ -1,9 +1,8 @@
 # ABOUTME: Tests for the improved voice functionality addressing issues.md
 # ABOUTME: Tests validation, thread safety, caching, logging, and platform compatibility
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 import threading
-import time
 import main
 
 
@@ -172,7 +171,6 @@ class TestVoiceImprovements:
     
     def test_cleanup_mechanism(self):
         """Test that cleanup mechanism is registered"""
-        import atexit
         
         # Check that cleanup function is registered
         # Note: This is a basic test - actual cleanup testing would require

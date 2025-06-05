@@ -8,7 +8,7 @@ import atexit
 import platform
 import os
 import tempfile
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -410,7 +410,7 @@ def _speak_with_pyttsx3(text: str, voice: str, emotion: str, rate: int) -> str:
         logger.debug(f"Using voice: {voice_used} (index: {voice_index})")
     else:
         voice_used = "default"
-        logger.warning(f"Could not find requested voice, using default")
+        logger.warning("Could not find requested voice, using default")
     
     # Calculate final rate based on emotion
     final_rate = calculate_emotion_rate(rate, emotion)
@@ -427,11 +427,11 @@ def _speak_with_pyttsx3(text: str, voice: str, emotion: str, rate: int) -> str:
     if voice:
         details.append(f"voice: {voice_used}")
     details.append(f"rate: {final_rate} wpm")
-    details.append(f"engine: pyttsx3")
+    details.append("engine: pyttsx3")
     
     detail_str = f" ({', '.join(details)})" if details else ""
     success_msg = f"🗣️ Spoke: '{text}'{detail_str}"
-    logger.info(f"Successfully spoke text with pyttsx3")
+    logger.info("Successfully spoke text with pyttsx3")
     return success_msg
 
 
@@ -480,11 +480,11 @@ def _speak_with_gtts(text: str, voice: str, emotion: str, rate: int) -> str:
         if voice:
             details.append(f"voice: {voice}")
         details.append(f"accent: {tld}")
-        details.append(f"engine: gTTS")
+        details.append("engine: gTTS")
         
         detail_str = f" ({', '.join(details)})" if details else ""
         success_msg = f"🗣️ Spoke: '{text}'{detail_str}"
-        logger.info(f"Successfully spoke text with gTTS")
+        logger.info("Successfully spoke text with gTTS")
         return success_msg
         
     except Exception as e:
@@ -554,12 +554,12 @@ def _speak_with_elevenlabs(text: str, voice: str, emotion: str, rate: int) -> st
             details.append(f"voice: {voice}")
         else:
             details.append(f"voice: {voice_id}")
-        details.append(f"model: eleven_flash_v2_5")
-        details.append(f"engine: ElevenLabs")
+        details.append("model: eleven_flash_v2_5")
+        details.append("engine: ElevenLabs")
         
         detail_str = f" ({', '.join(details)})" if details else ""
         success_msg = f"🗣️ Spoke: '{text}'{detail_str}"
-        logger.info(f"Successfully spoke text with ElevenLabs")
+        logger.info("Successfully spoke text with ElevenLabs")
         return success_msg
         
     except Exception as e:
@@ -724,7 +724,7 @@ def voice_guide() -> str:
         "emotional state, emphasize important information, or create atmosphere.",
         "",
         f"🔧 CURRENT ENGINE: {TTS_ENGINE.upper()}",
-        f"   Set TTS_ENGINE environment variable to 'pyttsx3' or 'gtts' to switch engines",
+        "   Set TTS_ENGINE environment variable to 'pyttsx3' or 'gtts' to switch engines",
         "",
         "🗣️ MAIN FUNCTION: speak(text, voice=None, emotion=None, rate=150)",
         "",
