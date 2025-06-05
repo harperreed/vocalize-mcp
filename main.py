@@ -1,12 +1,34 @@
-# ABOUTME: MCP server with text-to-speech capabilities using pyttsx3
-# ABOUTME: Provides voice emoting tools for agents
+# ABOUTME: MCP server with text-to-speech capabilities using pyttsx3 or gTTS
+# ABOUTME: Provides voice emoting tools for agents with configurable TTS engines
 from mcp.server.fastmcp import FastMCP
 import pyttsx3
 import threading
 import logging
 import atexit
 import platform
+import os
+import tempfile
 from typing import Dict, List, Optional, Tuple
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Optional gTTS imports
+try:
+    from gtts import gTTS
+    import pygame
+    GTTS_AVAILABLE = True
+except ImportError:
+    GTTS_AVAILABLE = False
+
+# Optional ElevenLabs imports
+try:
+    from elevenlabs.client import ElevenLabs
+    from elevenlabs import VoiceSettings
+    ELEVENLABS_AVAILABLE = True
+except ImportError:
+    ELEVENLABS_AVAILABLE = False
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -18,13 +40,55 @@ mcp = FastMCP("VocalizeAgent")
 # Thread lock for TTS operations
 tts_lock = threading.Lock()
 
-# Initialize TTS engine with error handling
-try:
-    tts_engine = pyttsx3.init()
-    logger.info("TTS engine initialized successfully")
-except Exception as e:
-    logger.error(f"Failed to initialize TTS engine: {e}")
-    tts_engine = None
+# Determine TTS engine from environment variable
+TTS_ENGINE = os.getenv("TTS_ENGINE", "pyttsx3").lower()
+
+# ElevenLabs configuration
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb")  # Default to George voice
+
+# Initialize TTS engine based on configuration
+tts_engine = None
+elevenlabs_client = None
+
+if TTS_ENGINE == "elevenlabs":
+    if ELEVENLABS_AVAILABLE and ELEVENLABS_API_KEY:
+        try:
+            elevenlabs_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+            logger.info("ElevenLabs engine initialized successfully")
+            tts_engine = "elevenlabs"
+        except Exception as e:
+            logger.error(f"Failed to initialize ElevenLabs: {e}")
+            logger.info("Falling back to pyttsx3")
+            TTS_ENGINE = "pyttsx3"
+    else:
+        if not ELEVENLABS_AVAILABLE:
+            logger.warning("ElevenLabs not available, falling back to pyttsx3")
+        if not ELEVENLABS_API_KEY:
+            logger.warning("ELEVENLABS_API_KEY not set, falling back to pyttsx3")
+        TTS_ENGINE = "pyttsx3"
+
+elif TTS_ENGINE == "gtts":
+    if GTTS_AVAILABLE:
+        try:
+            pygame.mixer.init()
+            logger.info("gTTS engine initialized successfully")
+            tts_engine = "gtts"  # Use string to indicate gTTS mode
+        except Exception as e:
+            logger.error(f"Failed to initialize gTTS/pygame: {e}")
+            logger.info("Falling back to pyttsx3")
+            TTS_ENGINE = "pyttsx3"
+    else:
+        logger.warning("gTTS not available, falling back to pyttsx3")
+        TTS_ENGINE = "pyttsx3"
+
+if TTS_ENGINE == "pyttsx3" or tts_engine is None:
+    try:
+        tts_engine = pyttsx3.init()
+        logger.info("pyttsx3 engine initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize pyttsx3 engine: {e}")
+        tts_engine = None
 
 # Voice cache for efficient lookups
 _voice_cache: Dict[str, int] = {}
@@ -133,13 +197,19 @@ VOICE_EMOTIONS = get_voice_emotions_for_platform()
 
 def cleanup_tts_engine():
     """Cleanup TTS engine on shutdown"""
-    global tts_engine
+    global tts_engine, elevenlabs_client
     if tts_engine:
         try:
-            tts_engine.stop()
-            logger.info("TTS engine stopped successfully")
+            if TTS_ENGINE == "pyttsx3" and hasattr(tts_engine, 'stop'):
+                tts_engine.stop()
+            elif TTS_ENGINE == "gtts":
+                pygame.mixer.quit()
+            elif TTS_ENGINE == "elevenlabs":
+                # ElevenLabs client doesn't need explicit cleanup
+                pass
+            logger.info(f"{TTS_ENGINE} engine stopped successfully")
         except Exception as e:
-            logger.error(f"Error stopping TTS engine: {e}")
+            logger.error(f"Error stopping {TTS_ENGINE} engine: {e}")
 
 
 def initialize_voice_cache():
@@ -151,29 +221,39 @@ def initialize_voice_cache():
         return
     
     try:
-        voices = tts_engine.getProperty('voices')
-        if not voices:
-            logger.warning("No voices available on this system")
-            return
-        
-        _available_voices = voices
-        _voice_cache = {}
-        
-        # Build cache for efficient lookups
-        for i, voice in enumerate(voices):
-            voice_name = voice.name.lower()
-            _voice_cache[voice_name] = i
+        if TTS_ENGINE == "pyttsx3":
+            voices = tts_engine.getProperty('voices')
+            if not voices:
+                logger.warning("No voices available on this system")
+                return
             
-            # Also cache partial matches for common variations
-            words = voice_name.split()
-            for word in words:
-                if word not in _voice_cache:
-                    _voice_cache[word] = i
-        
-        logger.info(f"Voice cache initialized with {len(voices)} voices")
-        
-        # Update emotion categories with actually available voices
-        _update_emotion_categories_with_available_voices()
+            _available_voices = voices
+            _voice_cache = {}
+            
+            # Build cache for efficient lookups
+            for i, voice in enumerate(voices):
+                voice_name = voice.name.lower()
+                _voice_cache[voice_name] = i
+                
+                # Also cache partial matches for common variations
+                words = voice_name.split()
+                for word in words:
+                    if word not in _voice_cache:
+                        _voice_cache[word] = i
+            
+            logger.info(f"Voice cache initialized with {len(voices)} voices")
+            
+            # Update emotion categories with actually available voices
+            _update_emotion_categories_with_available_voices()
+            
+        elif TTS_ENGINE == "gtts":
+            # gTTS doesn't have multiple voices, but we can simulate with language/accent
+            # For now, just use emotion-based rate adjustments
+            logger.info("gTTS engine - using default voice with emotion-based variations")
+            
+        elif TTS_ENGINE == "elevenlabs":
+            # ElevenLabs uses configured voice ID
+            logger.info(f"ElevenLabs engine - using voice ID: {ELEVENLABS_VOICE_ID}")
         
     except Exception as e:
         logger.error(f"Error initializing voice cache: {e}")
@@ -302,44 +382,188 @@ def speak(text: str, voice: str = None, emotion: str = None, rate: int = 150) ->
     # Use thread lock to ensure thread safety
     with tts_lock:
         try:
-            logger.info(f"Speaking text: '{text[:50]}...' with emotion='{emotion}', voice='{voice}', rate={rate}")
+            logger.info(f"Speaking text: '{text[:50]}...' with emotion='{emotion}', voice='{voice}', rate={rate} using {TTS_ENGINE}")
             
-            # Find appropriate voice based on voice name or emotion
-            voice_index = find_voice_by_emotion_and_name(emotion, voice)
-            
-            if _available_voices and voice_index < len(_available_voices):
-                tts_engine.setProperty('voice', _available_voices[voice_index].id)
-                voice_used = _available_voices[voice_index].name
-                logger.debug(f"Using voice: {voice_used} (index: {voice_index})")
+            if TTS_ENGINE == "pyttsx3":
+                return _speak_with_pyttsx3(text, voice, emotion, rate)
+            elif TTS_ENGINE == "gtts":
+                return _speak_with_gtts(text, voice, emotion, rate)
+            elif TTS_ENGINE == "elevenlabs":
+                return _speak_with_elevenlabs(text, voice, emotion, rate)
             else:
-                voice_used = "default"
-                logger.warning(f"Could not find requested voice, using default")
-            
-            # Calculate final rate based on emotion
-            final_rate = calculate_emotion_rate(rate, emotion)
-            tts_engine.setProperty('rate', final_rate)
-            
-            # Speak the text
-            tts_engine.say(text)
-            tts_engine.runAndWait()
-            
-            # Build response message
-            details = []
-            if emotion:
-                details.append(f"emotion: {emotion}")
-            if voice:
-                details.append(f"voice: {voice_used}")
-            details.append(f"rate: {final_rate} wpm")
-            
-            detail_str = f" ({', '.join(details)})" if details else ""
-            success_msg = f"🗣️ Spoke: '{text}'{detail_str}"
-            logger.info(f"Successfully spoke text with {len(details)} parameters")
-            return success_msg
+                return "❌ Error: No TTS engine available"
             
         except Exception as e:
             error_msg = f"Error speaking text: {str(e)}"
             logger.error(error_msg)
             return f"❌ {error_msg}"
+
+
+def _speak_with_pyttsx3(text: str, voice: str, emotion: str, rate: int) -> str:
+    """Speak using pyttsx3 engine"""
+    # Find appropriate voice based on voice name or emotion
+    voice_index = find_voice_by_emotion_and_name(emotion, voice)
+    
+    if _available_voices and voice_index < len(_available_voices):
+        tts_engine.setProperty('voice', _available_voices[voice_index].id)
+        voice_used = _available_voices[voice_index].name
+        logger.debug(f"Using voice: {voice_used} (index: {voice_index})")
+    else:
+        voice_used = "default"
+        logger.warning(f"Could not find requested voice, using default")
+    
+    # Calculate final rate based on emotion
+    final_rate = calculate_emotion_rate(rate, emotion)
+    tts_engine.setProperty('rate', final_rate)
+    
+    # Speak the text
+    tts_engine.say(text)
+    tts_engine.runAndWait()
+    
+    # Build response message
+    details = []
+    if emotion:
+        details.append(f"emotion: {emotion}")
+    if voice:
+        details.append(f"voice: {voice_used}")
+    details.append(f"rate: {final_rate} wpm")
+    details.append(f"engine: pyttsx3")
+    
+    detail_str = f" ({', '.join(details)})" if details else ""
+    success_msg = f"🗣️ Spoke: '{text}'{detail_str}"
+    logger.info(f"Successfully spoke text with pyttsx3")
+    return success_msg
+
+
+def _speak_with_gtts(text: str, voice: str, emotion: str, rate: int) -> str:
+    """Speak using gTTS engine"""
+    try:
+        # For gTTS, we'll use different languages/accents to simulate voice variety
+        lang = 'en'
+        tld = 'com'  # Default to US English
+        
+        # Map emotions to different accents/languages for variety
+        if emotion == "dramatic":
+            tld = 'co.uk'  # British English for dramatic effect
+        elif emotion == "friendly":
+            tld = 'com.au'  # Australian English for friendly
+        elif emotion == "professional":
+            tld = 'com'  # US English for professional
+        elif emotion == "playful":
+            tld = 'ca'  # Canadian English for playful
+        elif emotion == "calm":
+            tld = 'co.uk'  # British English for calm
+            
+        # Create gTTS object
+        tts = gTTS(text=text, lang=lang, tld=tld, slow=False)
+        
+        # Save to temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as tmp_file:
+            tts.save(tmp_file.name)
+            tmp_file_path = tmp_file.name
+        
+        # Play using pygame
+        pygame.mixer.music.load(tmp_file_path)
+        pygame.mixer.music.play()
+        
+        # Wait for playback to complete
+        while pygame.mixer.music.get_busy():
+            pygame.time.wait(100)
+        
+        # Clean up temporary file
+        os.unlink(tmp_file_path)
+        
+        # Build response message
+        details = []
+        if emotion:
+            details.append(f"emotion: {emotion}")
+        if voice:
+            details.append(f"voice: {voice}")
+        details.append(f"accent: {tld}")
+        details.append(f"engine: gTTS")
+        
+        detail_str = f" ({', '.join(details)})" if details else ""
+        success_msg = f"🗣️ Spoke: '{text}'{detail_str}"
+        logger.info(f"Successfully spoke text with gTTS")
+        return success_msg
+        
+    except Exception as e:
+        raise Exception(f"gTTS error: {str(e)}")
+
+
+def _speak_with_elevenlabs(text: str, voice: str, emotion: str, rate: int) -> str:
+    """Speak using ElevenLabs engine"""
+    try:
+        # Use the configured voice ID or override with voice parameter
+        voice_id = voice if voice else ELEVENLABS_VOICE_ID
+        
+        # Map emotions to voice settings for ElevenLabs
+        # Stability: 0-1 (higher = more stable, lower = more variable)
+        # Similarity: 0-1 (higher = closer to original voice)
+        # Style: 0-1 (emotional range)
+        # Use speaker boost for clarity
+        emotion_settings = {
+            "dramatic": VoiceSettings(stability=0.3, similarity_boost=0.8, style=0.9, use_speaker_boost=True),
+            "friendly": VoiceSettings(stability=0.7, similarity_boost=0.8, style=0.6, use_speaker_boost=True),
+            "professional": VoiceSettings(stability=0.8, similarity_boost=0.9, style=0.3, use_speaker_boost=True),
+            "playful": VoiceSettings(stability=0.4, similarity_boost=0.7, style=0.8, use_speaker_boost=True),
+            "calm": VoiceSettings(stability=0.9, similarity_boost=0.8, style=0.2, use_speaker_boost=True),
+            "cheerful": VoiceSettings(stability=0.5, similarity_boost=0.8, style=0.7, use_speaker_boost=True)
+        }
+        
+        # Get voice settings based on emotion, default to professional
+        voice_settings = emotion_settings.get(emotion, emotion_settings["professional"])
+        
+        # Generate speech using eleven_flash_v2_5 model
+        audio_generator = elevenlabs_client.text_to_speech.convert(
+            text=text,
+            voice_id=voice_id,
+            model_id="eleven_flash_v2_5",
+            voice_settings=voice_settings,
+            output_format="mp3_44100_128"
+        )
+        
+        # Convert generator to bytes
+        audio_data = b"".join(audio_generator)
+        
+        # Save to temporary file and play
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as tmp_file:
+            tmp_file.write(audio_data)
+            tmp_file_path = tmp_file.name
+        
+        # Initialize pygame mixer if not already done (for ElevenLabs playback)
+        if not pygame.mixer.get_init():
+            pygame.mixer.init()
+        
+        # Play using pygame
+        pygame.mixer.music.load(tmp_file_path)
+        pygame.mixer.music.play()
+        
+        # Wait for playback to complete
+        while pygame.mixer.music.get_busy():
+            pygame.time.wait(100)
+        
+        # Clean up temporary file
+        os.unlink(tmp_file_path)
+        
+        # Build response message
+        details = []
+        if emotion:
+            details.append(f"emotion: {emotion}")
+        if voice:
+            details.append(f"voice: {voice}")
+        else:
+            details.append(f"voice: {voice_id}")
+        details.append(f"model: eleven_flash_v2_5")
+        details.append(f"engine: ElevenLabs")
+        
+        detail_str = f" ({', '.join(details)})" if details else ""
+        success_msg = f"🗣️ Spoke: '{text}'{detail_str}"
+        logger.info(f"Successfully spoke text with ElevenLabs")
+        return success_msg
+        
+    except Exception as e:
+        raise Exception(f"ElevenLabs error: {str(e)}")
 
 
 # Add tool to explore emotional voice options
@@ -377,50 +601,104 @@ def list_voices() -> str:
         Information about available voices organized by emotion
     """
     try:
-        if not _available_voices:
-            logger.warning("No voices available in cache")
-            return "❌ No voices available on this system"
-        
         platform_name = platform.system()
         
-        # Show emotion categories first
-        result = [
-            f"🎭 VOICE GUIDE FOR {platform_name.upper()}:",
-            f"🎙️ {len(_available_voices)} voices available on your system",
-            "",
-            "🎯 RECOMMENDED EMOTIONS:"
-        ]
+        if TTS_ENGINE == "elevenlabs":
+            # Show ElevenLabs-specific voice information
+            result = [
+                f"🎭 VOICE GUIDE FOR {platform_name.upper()} (ElevenLabs Engine):",
+                "🎙️ Using ElevenLabs AI voices with emotional voice settings",
+                "",
+                f"🎯 CURRENT VOICE: {ELEVENLABS_VOICE_ID}",
+                "   Set ELEVENLABS_VOICE_ID environment variable to change voice",
+                "",
+                "🎛️ EMOTION-TO-VOICE-SETTINGS MAPPING:",
+                "• dramatic: Low stability (0.3), high style (0.9) - variable and expressive",
+                "• friendly: Medium stability (0.7), medium style (0.6) - warm and approachable", 
+                "• professional: High stability (0.8), low style (0.3) - clear and authoritative",
+                "• playful: Low stability (0.4), high style (0.8) - fun and variable",
+                "• calm: High stability (0.9), low style (0.2) - soothing and consistent",
+                "• cheerful: Medium stability (0.5), medium-high style (0.7) - upbeat",
+                "",
+                "💡 USAGE:",
+                "   speak('Hello!', emotion='friendly')     # Warm, approachable tone",
+                "   speak('Alert!', emotion='dramatic')     # Expressive, variable delivery",
+                "   speak('Calm down', emotion='calm')      # Soothing, stable delivery",
+                "",
+                f"🔧 Engine: {TTS_ENGINE} (eleven_flash_v2_5 model)",
+                f"🔑 API Key: {'✓ Set' if ELEVENLABS_API_KEY else '✗ Missing'}"
+            ]
+            return "\n".join(result)
         
-        for emotion, info in VOICE_EMOTIONS.items():
-            available_voices = info.get("available_voices", [])
-            if available_voices and available_voices != ["default"]:
-                result.append(f"• {emotion}: {info['description']} ({len(available_voices)} voices)")
-            else:
-                result.append(f"• {emotion}: {info['description']} (using fallback)")
+        elif TTS_ENGINE == "gtts":
+            # Show gTTS-specific voice information
+            result = [
+                f"🎭 VOICE GUIDE FOR {platform_name.upper()} (gTTS Engine):",
+                "🎙️ Using Google Text-to-Speech with accent variations",
+                "",
+                "🎯 EMOTION-TO-ACCENT MAPPING:",
+                "• dramatic: British English (co.uk)",
+                "• friendly: Australian English (com.au)", 
+                "• professional: US English (com)",
+                "• playful: Canadian English (ca)",
+                "• calm: British English (co.uk)",
+                "",
+                "💡 USAGE:",
+                "   speak('Hello!', emotion='friendly')  # Australian accent",
+                "   speak('Alert!', emotion='dramatic')   # British accent",
+                "   speak('Calm down', emotion='calm')    # British accent",
+                "",
+                f"🔧 Engine: {TTS_ENGINE} (Google Text-to-Speech)"
+            ]
+            return "\n".join(result)
         
-        result.append("\n" + "="*60)
-        result.append("🎯 VOICES BY EMOTION CATEGORY:")
-        result.append("")
+        elif TTS_ENGINE == "pyttsx3":
+            if not _available_voices:
+                logger.warning("No voices available in cache")
+                return "❌ No voices available on this system"
+            
+            # Show emotion categories first
+            result = [
+                f"🎭 VOICE GUIDE FOR {platform_name.upper()} (pyttsx3 Engine):",
+                f"🎙️ {len(_available_voices)} voices available on your system",
+                "",
+                "🎯 RECOMMENDED EMOTIONS:"
+            ]
+            
+            for emotion, info in VOICE_EMOTIONS.items():
+                available_voices = info.get("available_voices", [])
+                if available_voices and available_voices != ["default"]:
+                    result.append(f"• {emotion}: {info['description']} ({len(available_voices)} voices)")
+                else:
+                    result.append(f"• {emotion}: {info['description']} (using fallback)")
+            
+            result.append("\n" + "="*60)
+            result.append("🎯 VOICES BY EMOTION CATEGORY:")
+            result.append("")
+            
+            # Show available voices for each emotion category
+            for emotion, info in VOICE_EMOTIONS.items():
+                available_voices = info.get("available_voices", info.get("voices", []))
+                if available_voices:
+                    result.append(f"🎭 {emotion.upper()}:")
+                    for voice_name in available_voices[:5]:  # Limit to 5 per category
+                        if voice_name in _voice_cache:
+                            index = _voice_cache[voice_name.lower()]
+                            result.append(f"   {index}: {voice_name}")
+                    if len(available_voices) > 5:
+                        result.append(f"   ... and {len(available_voices) - 5} more")
+                    result.append("")
+            
+            result.append("💡 USAGE:")
+            result.append("   speak('Hello!', emotion='friendly')")
+            result.append("   speak('Alert!', emotion='dramatic')")
+            result.append("   speak('Calm down', emotion='calm')")
+            result.append(f"\n🔧 Engine: {TTS_ENGINE}")
+            
+            return "\n".join(result)
         
-        # Show available voices for each emotion category
-        for emotion, info in VOICE_EMOTIONS.items():
-            available_voices = info.get("available_voices", info.get("voices", []))
-            if available_voices:
-                result.append(f"🎭 {emotion.upper()}:")
-                for voice_name in available_voices[:5]:  # Limit to 5 per category
-                    if voice_name in _voice_cache:
-                        index = _voice_cache[voice_name.lower()]
-                        result.append(f"   {index}: {voice_name}")
-                if len(available_voices) > 5:
-                    result.append(f"   ... and {len(available_voices) - 5} more")
-                result.append("")
-        
-        result.append("💡 USAGE:")
-        result.append("   speak('Hello!', emotion='friendly')")
-        result.append("   speak('Alert!', emotion='dramatic')")
-        result.append("   speak('Calm down', emotion='calm')")
-        
-        return "\n".join(result)
+        else:
+            return "❌ No TTS engine available"
         
     except Exception as e:
         error_msg = f"Error listing voices: {str(e)}"
@@ -444,6 +722,9 @@ def voice_guide() -> str:
         "This MCP server enables you to express emotions and personality through voice,",
         "making interactions more engaging and human-like. Use voice to match your",
         "emotional state, emphasize important information, or create atmosphere.",
+        "",
+        f"🔧 CURRENT ENGINE: {TTS_ENGINE.upper()}",
+        f"   Set TTS_ENGINE environment variable to 'pyttsx3' or 'gtts' to switch engines",
         "",
         "🗣️ MAIN FUNCTION: speak(text, voice=None, emotion=None, rate=150)",
         "",

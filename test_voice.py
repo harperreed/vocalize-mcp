@@ -5,6 +5,32 @@ from unittest.mock import Mock, patch, MagicMock
 import main
 
 
+class TestEngineInitialization:
+    """Test TTS engine initialization and selection"""
+    
+    def test_engine_variables_defined(self):
+        """Test that engine configuration variables are properly defined"""
+        assert hasattr(main, 'TTS_ENGINE')
+        assert hasattr(main, 'GTTS_AVAILABLE')
+        assert hasattr(main, 'ELEVENLABS_AVAILABLE')
+        assert hasattr(main, 'ELEVENLABS_API_KEY')
+        assert hasattr(main, 'ELEVENLABS_VOICE_ID')
+    
+    def test_dotenv_loaded(self):
+        """Test that dotenv is loaded (API key should be available if .env exists)"""
+        # If .env file exists with ELEVENLABS_API_KEY, it should be loaded
+        assert main.ELEVENLABS_API_KEY is not None or main.ELEVENLABS_API_KEY == ""
+    
+    def test_engine_fallback_logic(self):
+        """Test that engine fallback works correctly"""
+        # The actual engine should be one of the supported types
+        valid_engines = ['pyttsx3', 'gtts', 'elevenlabs']
+        assert main.TTS_ENGINE in valid_engines
+        
+        # tts_engine should be initialized
+        assert main.tts_engine is not None
+
+
 class TestVoiceEngine:
     """Test voice engine initialization and basic functionality"""
     
@@ -86,20 +112,16 @@ class TestVoiceSelection:
 class TestSpeakFunction:
     """Test the main speak function"""
     
-    @patch('main.tts_engine')
-    def test_basic_speak(self, mock_engine):
+    @patch('main._speak_with_pyttsx3')
+    @patch('main.TTS_ENGINE', 'pyttsx3')
+    def test_basic_speak(self, mock_speak_pyttsx3):
         """Test basic speech without emotion or voice"""
-        mock_voices = [Mock()]
-        mock_voices[0].name = "Default"
-        mock_voices[0].id = "default.voice"
-        mock_engine.getProperty.return_value = mock_voices
+        mock_speak_pyttsx3.return_value = "🗣️ Spoke: 'Hello world' (rate: 150 wpm, engine: pyttsx3)"
         
         result = main.speak("Hello world")
         
-        # Verify TTS engine calls
-        mock_engine.setProperty.assert_any_call('rate', 150)
-        mock_engine.say.assert_called_with("Hello world")
-        mock_engine.runAndWait.assert_called_once()
+        # Verify the appropriate engine function was called
+        mock_speak_pyttsx3.assert_called_once_with("Hello world", None, None, 150)
         
         # Verify return message
         assert "Hello world" in result
@@ -203,19 +225,36 @@ class TestVoiceListingFunctions:
         assert "speak(" in result
     
     @patch('main.tts_engine')
-    def test_list_voices(self, mock_engine):
-        """Test voice listing function"""
-        mock_voices = [Mock(), Mock(), Mock(), Mock()]
-        mock_voices[0].name = "Albert"
-        mock_voices[1].name = "Good News"
-        mock_voices[2].name = "Bad News"
-        mock_voices[3].name = "Fred"
-        mock_engine.getProperty.return_value = mock_voices
-        
-        result = main.list_voices()
-        
-        assert "🎯 RECOMMENDED EMOTIONS:" in result
-        assert "voices available on your system" in result
+    def test_list_voices_pyttsx3(self):
+        """Test voice listing function for pyttsx3 engine"""
+        with patch('main.TTS_ENGINE', 'pyttsx3'), \
+             patch('main._available_voices') as mock_voices:
+            mock_voices.__len__.return_value = 5
+            
+            result = main.list_voices()
+            
+            assert "pyttsx3 Engine" in result
+            assert "🎯 RECOMMENDED EMOTIONS:" in result
+            assert "voices available on your system" in result
+    
+    def test_list_voices_gtts(self):
+        """Test voice listing function for gTTS engine"""
+        with patch('main.TTS_ENGINE', 'gtts'):
+            result = main.list_voices()
+            
+            assert "gTTS Engine" in result
+            assert "Google Text-to-Speech with accent variations" in result
+            assert "EMOTION-TO-ACCENT MAPPING:" in result
+    
+    def test_list_voices_elevenlabs(self):
+        """Test voice listing function for ElevenLabs engine"""
+        with patch('main.TTS_ENGINE', 'elevenlabs'), \
+             patch('main.ELEVENLABS_VOICE_ID', 'test_voice_id'):
+            result = main.list_voices()
+            
+            assert "ElevenLabs Engine" in result
+            assert "CURRENT VOICE: test_voice_id" in result
+            assert "EMOTION-TO-VOICE-SETTINGS MAPPING:" in result
     
     @patch('main.tts_engine')
     def test_list_voices_no_voices(self, mock_engine):

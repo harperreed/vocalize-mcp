@@ -6,10 +6,12 @@ A powerful MCP server that provides text-to-speech capabilities with emotion con
 
 ## 📋 Summary
 
-VocalizeAgent is an MCP (Machine Conversation Protocol) server that enables AI agents to speak text aloud with emotional expression. Built on pyttsx3, it offers:
+VocalizeAgent is an MCP (Machine Conversation Protocol) server that enables AI agents to speak text aloud with emotional expression. Built with support for multiple TTS engines (pyttsx3, gTTS, and ElevenLabs), it offers:
 
 - 🎭 Six emotion categories: cheerful, dramatic, friendly, professional, playful, and calm
 - 🎛️ Full control over voice selection, speaking rate, and emotional tone
+- 🎯 Multiple TTS engines: pyttsx3 (offline), gTTS (online with accents), ElevenLabs (AI voices)
+- 🔄 Automatic fallback when optional dependencies or API keys are not available
 - 📚 Comprehensive documentation for effective voice emoting
 - 🤖 Simple but powerful API for AI agents to vocalize their responses
 
@@ -24,14 +26,132 @@ This tool enhances AI interactions by adding an audio dimension to text-based co
 git clone https://github.com/harperreed/vocalize-mcp.git
 cd vocalize-mcp
 
-# Install with uv (recommended)
+# Install with uv (recommended) - full installation with all engines
 uv sync
+
+# OR install simple version (pyttsx3 only)
+uv sync --only-deps simple
 
 # OR install with pip
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install -e .
+pip install -e .                    # Full installation
+pip install -e .[simple]           # Simple installation (pyttsx3 only)
 ```
+
+### TTS Engine Selection
+
+Control which TTS engine to use with the `TTS_ENGINE` environment variable:
+
+```bash
+# Use pyttsx3 (default, offline)
+TTS_ENGINE=pyttsx3 uv run python main.py
+
+# Use gTTS (online, requires --extra gtts)
+TTS_ENGINE=gtts uv run python main.py
+
+# Use ElevenLabs (AI voices, requires --extra elevenlabs and API key)
+ELEVENLABS_API_KEY=your_api_key_here TTS_ENGINE=elevenlabs uv run python main.py
+```
+
+**Engine Features:**
+- **pyttsx3**: Offline engine with system voices and rate control
+- **gTTS**: Online Google TTS with accent variations for emotions  
+- **ElevenLabs**: AI-powered voices with advanced emotional control
+
+### ElevenLabs Configuration
+
+For ElevenLabs engine, set these environment variables:
+
+```bash
+export ELEVENLABS_API_KEY="your_api_key_here"
+export ELEVENLABS_VOICE_ID="JBFqnCBsd6RMkjVDRZzb"  # Optional, defaults to George
+```
+
+**Or create a `.env` file** (automatically loaded):
+```bash
+ELEVENLABS_API_KEY=your_api_key_here
+ELEVENLABS_VOICE_ID=JBFqnCBsd6RMkjVDRZzb
+```
+
+- Get your API key from [ElevenLabs Dashboard](https://elevenlabs.io/app/speech-synthesis)
+- Voice IDs can be found in your ElevenLabs voice library
+- Uses the `eleven_flash_v2_5` model for fast, high-quality synthesis
+- Environment variables override `.env` file values
+
+## 🔗 Install as MCP Server
+
+To use VocalizeAgent with Claude Desktop or other MCP clients:
+
+### 1. Install the Package
+
+```bash
+# Clone and install the package
+git clone https://github.com/harperreed/vocalize-mcp.git
+cd vocalize-mcp
+uv sync  # Full installation with all engines by default
+```
+
+### 2. Configure MCP Client
+
+Add to your MCP client configuration (e.g., Claude Desktop's config):
+
+```json
+{
+  "mcpServers": {
+    "vocalize": {
+      "command": "uv",
+      "args": ["run", "python", "/path/to/vocalize-mcp/main.py"],
+      "cwd": "/path/to/vocalize-mcp",
+      "env": {
+        "TTS_ENGINE": "pyttsx3",
+        "ELEVENLABS_API_KEY": "your_api_key_here",
+        "ELEVENLABS_VOICE_ID": "JBFqnCBsd6RMkjVDRZzb"
+      }
+    }
+  }
+}
+```
+
+### 3. Alternative Installation Methods
+
+**Using Python directly:**
+```json
+{
+  "mcpServers": {
+    "vocalize": {
+      "command": "python",
+      "args": ["/path/to/vocalize-mcp/main.py"],
+      "env": {
+        "TTS_ENGINE": "elevenlabs",
+        "ELEVENLABS_API_KEY": "your_api_key"
+      }
+    }
+  }
+}
+```
+
+**Using executable script:**
+```json
+{
+  "mcpServers": {
+    "vocalize": {
+      "command": "/path/to/vocalize-mcp/.venv/bin/vocalize-mcp",
+      "env": {
+        "TTS_ENGINE": "gtts"
+      }
+    }
+  }
+}
+```
+
+### 4. Available Tools
+
+Once connected, you'll have access to these MCP tools:
+- `speak()` - Generate speech with emotional control
+- `list_voices()` - Browse available voices for current engine  
+- `list_emotions()` - See emotion categories and descriptions
+- `voice_guide()` - Complete usage documentation
 
 ### Running the Server
 
@@ -106,7 +226,11 @@ voice_guide()
 - **Python**: 3.13+
 - **uv**: Fast Python package manager (recommended) - [Install uv](https://github.com/astral-sh/uv)
 - **MCP**: Machine Conversation Protocol for AI agent integration
-- **pyttsx3**: Cross-platform text-to-speech library
+- **pyttsx3**: Cross-platform text-to-speech library (included by default)
+- **gTTS**: Google Text-to-Speech (included by default)
+- **pygame**: Audio playback for gTTS and ElevenLabs (included by default)
+- **elevenlabs**: ElevenLabs AI voices (included by default)
+- **python-dotenv**: Environment variable loading (included by default)
 
 ### Why uv?
 
@@ -120,10 +244,26 @@ This project uses [uv](https://github.com/astral-sh/uv) for dependency managemen
 
 VocalizeAgent is built on a FastMCP server that exposes TTS functionality through simple API calls. The system:
 
-1. Organizes voices into emotional categories for easier selection
-2. Adjusts speaking rates based on emotional context
-3. Provides tools for voice discovery and documentation
-4. Handles exceptions gracefully for robust operation
+1. **Multi-engine support**: Dynamically selects TTS engine based on environment variable
+2. **Graceful fallback**: Automatically falls back to pyttsx3 when gTTS is not available
+3. **Emotion mapping**: Maps emotions to appropriate voices (pyttsx3) or accents (gTTS)
+4. **Voice organization**: Organizes voices into emotional categories for easier selection
+5. **Rate adjustment**: Adjusts speaking rates based on emotional context
+6. **Discovery tools**: Provides tools for voice discovery and documentation
+7. **Exception handling**: Handles errors gracefully for robust operation
+
+#### TTS Engine Comparison
+
+| Feature | pyttsx3 | gTTS | ElevenLabs |
+|---------|---------|------|------------|
+| **Connection** | Offline | Online (requires internet) | Online (requires internet + API key) |
+| **Voices** | System voices | Google voices with accents | AI-generated voices |
+| **Emotion mapping** | Voice selection | Accent variation (UK, AU, CA, US) | Voice settings (stability, style, similarity) |
+| **Rate control** | Full rate control | Fixed rate | Fixed rate |
+| **Latency** | Instant | Network dependent | Network dependent |
+| **Quality** | System dependent | Consistent high quality | Premium AI quality |
+| **Cost** | Free | Free | Paid (API credits) |
+| **Voice variety** | Limited to system | Accent variations | Unlimited AI voices |
 
 ### Voice Emotion Categories
 

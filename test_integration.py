@@ -11,17 +11,24 @@ class TestRealVoiceIntegration:
         """Test that we can actually list real voices"""
         result = main.list_voices()
         
-        # Should contain expected content
-        assert "🎯 RECOMMENDED EMOTIONS:" in result
-        assert "voices available on your system" in result
+        # Should contain expected content based on current engine
+        if main.TTS_ENGINE == "pyttsx3":
+            assert "pyttsx3 Engine" in result
+            assert "🎯 RECOMMENDED EMOTIONS:" in result
+        elif main.TTS_ENGINE == "gtts":
+            assert "gTTS Engine" in result
+            assert "EMOTION-TO-ACCENT MAPPING:" in result
+        elif main.TTS_ENGINE == "elevenlabs":
+            assert "ElevenLabs Engine" in result
+            assert "CURRENT VOICE:" in result
     
     def test_real_emotion_listing(self):
         """Test that emotion listing works with real data"""
         result = main.list_emotions()
         
         assert "🎭 EMOTION CATEGORIES FOR EXPRESSIVE SPEECH:" in result
-        assert "CHEERFUL" in result
         assert "DRAMATIC" in result
+        assert "FRIENDLY" in result
         assert "💡 USAGE EXAMPLES:" in result
     
     def test_real_voice_guide(self):
@@ -32,6 +39,7 @@ class TestRealVoiceIntegration:
         sections = [
             "🎙️ VOCALIZE AGENT",
             "🎯 PURPOSE:",
+            "🔧 CURRENT ENGINE:",  # Updated for multi-engine
             "🗣️ MAIN FUNCTION:",
             "📋 EMOTION CATEGORIES & WHEN TO USE:",
             "💡 BEST PRACTICES FOR AI AGENTS:",
