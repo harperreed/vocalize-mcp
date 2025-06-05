@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "vocalize": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/harperreed/vocalize-mcp",
+        "vocalize-mcp"
+      ]
+    }
+  }
+}
